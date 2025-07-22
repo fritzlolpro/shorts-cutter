@@ -92,6 +92,9 @@ pub enum LoggingError {
     
     #[error("Log file initialization failed")]
     InitializationFailed,
+    
+    #[error("Log file error")]
+    FileError,
 }
 
 /// Type aliases для упрощения использования

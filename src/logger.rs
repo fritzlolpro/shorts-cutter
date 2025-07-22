@@ -5,17 +5,32 @@ use crate::error::{LoggingError, LoggingResult};
 
 /// Инициализирует систему логирования
 pub fn initialize_logging(log_file_path: PathBuf, _console_level: &str, _file_level: &str) -> LoggingResult<()> {
-    // Простая версия логирования - пока используем только stdout
-    let subscriber = tracing_subscriber::fmt()
+    use std::fs::OpenOptions;
+    use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt};
+    
+    // Создаем файл для логирования
+    let log_file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&log_file_path)
+        .map_err(|_| LoggingError::FileError)?;
+    
+    // Настраиваем логирование в файл и на консоль
+    let file_layer = fmt::layer()
+        .with_writer(log_file)
+        .with_ansi(false);
+    
+    let console_layer = fmt::layer()
         .with_target(false)
         .with_thread_ids(false)
         .with_thread_names(false)
         .with_file(false)
-        .with_line_number(false)
-        .finish();
+        .with_line_number(false);
     
-    tracing::subscriber::set_global_default(subscriber)
-        .map_err(|_| LoggingError::InitializationFailed)?;
+    tracing_subscriber::registry()
+        .with(console_layer)
+        .with(file_layer)
+        .init();
     
     info!("Logging initialized. Log file: {}", log_file_path.display());
     

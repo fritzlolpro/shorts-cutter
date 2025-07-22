@@ -1,0 +1,33 @@
+2025-07-22T23:14:45.599704Z  INFO shorts_cutter::logger: Logging initialized. Log file: \\?\D:\documents\programing\shorts-cutter\test-output\shorts-cutter-20250723-021445.log
+2025-07-22T23:14:45.600272Z DEBUG shorts_cutter::ffmpeg: Checking FFmpeg availability...
+2025-07-22T23:14:45.634976Z  INFO shorts_cutter::ffmpeg: FFmpeg found: ffmpeg version 7.1-essentials_build-www.gyan.dev Copyright (c) 2000-2024 the FFmpeg developers
+2025-07-22T23:14:45.635117Z  INFO shorts_cutter: Using ffmpeg version 7.1-essentials_build-www.gyan.dev Copyright (c) 2000-2024 the FFmpeg developers
+2025-07-22T23:14:45.636190Z  INFO shorts_cutter::logger: === SHORTS CUTTER STARTED ===
+2025-07-22T23:14:45.636321Z  INFO shorts_cutter::logger: Input directory: \\?\D:\documents\programing\shorts-cutter\test-input
+2025-07-22T23:14:45.636435Z  INFO shorts_cutter::logger: Output directory: \\?\D:\documents\programing\shorts-cutter\test-output
+2025-07-22T23:14:45.636522Z  INFO shorts_cutter::logger: Thread count: 1
+2025-07-22T23:14:45.636667Z  INFO shorts_cutter::logger: FFmpeg filter: [0:v]scale=2276:1280,boxblur=4[bg];[1:v]scale=720:-1[fg];[bg][fg]overlay=(W-w)/2:(H-h)/2[tmp];[tmp]crop=720:1280:(2276-720)/2:0[out]
+2025-07-22T23:14:45.636804Z DEBUG shorts_cutter::utils: Searching for video files in: \\?\D:\documents\programing\shorts-cutter\test-input
+2025-07-22T23:14:45.637073Z DEBUG shorts_cutter::utils: Found 1 video files
+2025-07-22T23:14:45.637179Z  INFO shorts_cutter::logger: Found 1 .mp4 files for processing
+2025-07-22T23:14:45.637594Z  INFO shorts_cutter::worker: Creating worker pool with 1 workers
+2025-07-22T23:14:45.637733Z  INFO shorts_cutter: Starting parallel processing with 1 workers
+2025-07-22T23:14:45.637837Z  INFO shorts_cutter::worker: Starting parallel processing of 1 tasks
+2025-07-22T23:14:45.638056Z DEBUG shorts_cutter::worker: Starting task 1/1 for: sample.mp4
+2025-07-22T23:14:45.638141Z  INFO shorts_cutter::logger: START processing sample.mp4
+2025-07-22T23:14:45.639055Z  INFO shorts_cutter::logger: CMD: ffmpeg -i \\?\D:\documents\programing\shorts-cutter\test-input\sample.mp4 -i \\?\D:\documents\programing\shorts-cutter\test-input\sample.mp4 -filter_complex [0:v]scale=2276:1280,boxblur=4[bg];[1:v]scale=720:-1[fg];[bg][fg]overlay=(W-w)/2:(H-h)/2[tmp];[tmp]crop=720:1280:(2276-720)/2:0[out] -map [out] -map 0:a -y \\?\D:\documents\programing\shorts-cutter\test-output\sample-short.mp4
+2025-07-22T23:14:45.639323Z DEBUG shorts_cutter::logger: FFmpeg command for sample.mp4: ffmpeg -i \\?\D:\documents\programing\shorts-cutter\test-input\sample.mp4 -i \\?\D:\documents\programing\shorts-cutter\test-input\sample.mp4 -filter_complex [0:v]scale=2276:1280,boxblur=4[bg];[1:v]scale=720:-1[fg];[bg][fg]overlay=(W-w)/2:(H-h)/2[tmp];[tmp]crop=720:1280:(2276-720)/2:0[out] -map [out] -map 0:a -y \\?\D:\documents\programing\shorts-cutter\test-output\sample-short.mp4
+2025-07-22T23:14:45.639529Z DEBUG shorts_cutter::ffmpeg: Starting FFmpeg execution for: \\?\D:\documents\programing\shorts-cutter\test-input\sample.mp4
+2025-07-22T23:14:45.639741Z DEBUG shorts_cutter::ffmpeg: Command: ffmpeg -i \\?\D:\documents\programing\shorts-cutter\test-input\sample.mp4 -i \\?\D:\documents\programing\shorts-cutter\test-input\sample.mp4 -filter_complex [0:v]scale=2276:1280,boxblur=4[bg];[1:v]scale=720:-1[fg];[bg][fg]overlay=(W-w)/2:(H-h)/2[tmp];[tmp]crop=720:1280:(2276-720)/2:0[out] -map [out] -map 0:a -y \\?\D:\documents\programing\shorts-cutter\test-output\sample-short.mp4
+2025-07-22T23:14:45.678660Z  WARN shorts_cutter::ffmpeg: FFmpeg failed for: sample.mp4 (exit code: -1094995529)
+2025-07-22T23:14:45.678813Z ERROR shorts_cutter::logger: ERROR: sample.mp4 -> sample-short.mp4 (40ms)
+2025-07-22T23:14:45.678919Z ERROR shorts_cutter::logger: ERRMSG: FFmpeg error: FFmpeg execution failed with exit code -1094995529
+2025-07-22T23:14:45.679046Z DEBUG shorts_cutter::logger: File processing failed after 40.6326ms: \\?\D:\documents\programing\shorts-cutter\test-input\sample.mp4 -> \\?\D:\documents\programing\shorts-cutter\test-output\sample-short.mp4
+2025-07-22T23:14:45.679170Z  INFO shorts_cutter::worker: Completed processing 1 tasks in 0s
+2025-07-22T23:14:45.679322Z  INFO shorts_cutter::logger: === PROCESSING COMPLETED ===
+2025-07-22T23:14:45.679440Z  INFO shorts_cutter::logger: Total files: 1
+2025-07-22T23:14:45.679547Z  INFO shorts_cutter::logger: Successful: 0
+2025-07-22T23:14:45.679630Z  INFO shorts_cutter::logger: Failed: 1
+2025-07-22T23:14:45.679705Z  INFO shorts_cutter::logger: Total time: 41ms
+2025-07-22T23:14:45.679787Z  WARN shorts_cutter::logger: Files with errors:
+2025-07-22T23:14:45.679897Z ERROR shorts_cutter::logger:   ✗ sample.mp4: FFmpeg error: FFmpeg execution failed with exit code -1094995529

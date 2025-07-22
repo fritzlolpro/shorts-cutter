@@ -1,12 +1,16 @@
 mod cli;
 mod config;
 mod error;
+mod ffmpeg;
 mod logger;
 mod utils;
+mod worker;
 
 use cli::CliArgs;
 use error::Result;
+use worker::WorkerPool;
 use std::process;
+use tracing::{info, error as log_error};
 
 #[tokio::main]
 async fn main() {
@@ -14,6 +18,10 @@ async fn main() {
         Ok(code) => code,
         Err(e) => {
             eprintln!("Error: {}", e);
+            
+            // Логируем ошибку если логирование уже инициализировано
+            log_error!("Critical error: {}", e);
+            
             config::exit_codes::CRITICAL_ERROR
         }
     };
@@ -42,6 +50,15 @@ async fn run() -> Result<i32> {
     // Выводим информацию о конфигурации
     validated_args.print_config_info();
     
+    // Проверяем версию FFmpeg и логируем
+    match ffmpeg::check_ffmpeg_availability().await {
+        Ok(version) => info!("Using {}", version),
+        Err(e) => {
+            eprintln!("FFmpeg check failed: {}", e);
+            return Ok(config::exit_codes::CRITICAL_ERROR);
+        }
+    }
+    
     // Логируем информацию о запуске
     logger::log_startup_info(&validated_args.input, &validated_args.output, validated_args.threads);
     
@@ -59,19 +76,22 @@ async fn run() -> Result<i32> {
     
     println!("{}", config::messages::PROCESSING_STARTED);
     println!("Found {} files to process", tasks.len());
+    println!("Using {} parallel threads", validated_args.threads);
+    println!();
     
-    // TODO: Здесь будет создание worker pool и запуск обработки
-    // Пока просто имитируем успешную обработку
-    let mut summary = logger::ProcessingSummary::new();
+    // Создаем worker pool и запускаем обработку
+    let worker_pool = WorkerPool::new(validated_args.threads);
     
-    for task in tasks {
-        println!("Would process: {} -> {}", task.input_filename(), task.output_filename());
-        // Имитируем успешную обработку
-        summary.add_success(task.input, task.output, std::time::Duration::from_secs(5));
-    }
+    info!("Starting parallel processing with {} workers", validated_args.threads);
     
-    summary.set_total_duration(std::time::Duration::from_secs(30));
+    let processing_results = worker_pool.execute_tasks(tasks).await?;
+    
+    // Генерируем финальный отчет
+    let summary = processing_results.to_processing_summary();
     summary.print_final_report();
+    
+    println!("
+{}", config::messages::PROCESSING_COMPLETED);
     
     Ok(summary.exit_code())
 }
