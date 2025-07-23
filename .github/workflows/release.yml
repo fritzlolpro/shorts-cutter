@@ -61,6 +61,7 @@ jobs:
 
       # Создание архива (Windows)
       - name: Create Windows archive
+        id: windows-archive
         if: matrix.os == 'windows-latest'
         shell: powershell
         run: |
@@ -84,6 +85,7 @@ jobs:
 
       # Создание архива (Unix)
       - name: Create Unix archive
+        id: unix-archive
         if: matrix.os != 'windows-latest'
         shell: bash
         run: |
@@ -112,7 +114,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: shorts-cutter-${{ matrix.suffix }}
-          path: ${{ steps.archive.outputs.archive_file || steps.create-windows-archive.outputs.archive_file }}
+          path: |
+            ${{ steps.windows-archive.outputs.archive_file }}
+            ${{ steps.unix-archive.outputs.archive_file }}
 
   # Создаем релиз с артефактами
   create-release:
