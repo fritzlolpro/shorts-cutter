@@ -132,6 +132,21 @@ shorts-cutter -i ./input -o ./output -t 4
 
 ## 🎬 Video Processing Details
 
+### Recommended Workflow
+For best results, combine Shorts Cutter with other tools in your video editing pipeline:
+
+1. **Extract highlights** from long-form videos using [LosslessCut](https://github.com/mifi/lossless-cut)
+   - Quickly identify and cut interesting moments
+   - Create multiple short clips from a single source video
+   - Maintain original quality with lossless cutting
+
+2. **Batch convert to shorts** using Shorts Cutter
+   - Process all extracted clips simultaneously
+   - Apply consistent vertical format and blurred background
+   - Generate social media-ready content at scale
+
+This two-step approach allows you to efficiently transform lengthy content into engaging short-form videos optimized for platforms like TikTok, Instagram Reels, and YouTube Shorts.
+
 ### Input Requirements
 - **Format**: MP4 files only
 - **Location**: All MP4 files in the input directory (searched recursively)
