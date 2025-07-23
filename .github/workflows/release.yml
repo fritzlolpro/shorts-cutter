@@ -29,8 +29,8 @@ jobs:
             os: ubuntu-latest
             archive: tar.gz
             suffix: linux-x64
-          - target: x86_64-pc-windows-gnu
-            os: ubuntu-latest  
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
             archive: zip
             suffix: windows-x64
           - target: x86_64-apple-darwin
@@ -42,53 +42,67 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Установим современную версию Rust
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
 
-      # Установим FFmpeg для тестирования (опционально)
-      - name: Install FFmpeg (Linux)
+      # Установка зависимостей для Linux
+      - name: Install Linux dependencies
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg
+          sudo apt-get install -y build-essential
 
-      - name: Install FFmpeg (macOS)
-        if: matrix.os == 'macos-latest'
-        run: brew install ffmpeg
-
-      # Обновим Cargo.lock до совместимой версии
-      - name: Update Cargo.lock
-        run: cargo update
-
-      # Соберем бинарник
+      # Сборка проекта
       - name: Build release binary
         run: |
           cargo build --release --target ${{ matrix.target }} --verbose
 
-      # Создадим архив
-      - name: Create archive
-        id: archive
+      # Создание архива (Windows)
+      - name: Create Windows archive
+        if: matrix.os == 'windows-latest'
+        shell: powershell
+        run: |
+          $binaryName = "shorts-cutter.exe"
+          $archiveName = "shorts-cutter-${{ matrix.suffix }}.zip"
+          
+          # Создаем папку для файлов
+          New-Item -ItemType Directory -Force -Path release_files
+          
+          # Копируем файлы
+          Copy-Item "target\${{ matrix.target }}\release\$binaryName" release_files\
+          Copy-Item "README.md" release_files\ -ErrorAction SilentlyContinue
+          Copy-Item "README_RU.md" release_files\ -ErrorAction SilentlyContinue
+          Copy-Item "LICENSE" release_files\ -ErrorAction SilentlyContinue
+          
+          # Создаем архив
+          Compress-Archive -Path release_files\* -DestinationPath $archiveName
+          
+          # Выводим для следующего шага
+          echo "archive_file=$archiveName" >> $env:GITHUB_OUTPUT
+
+      # Создание архива (Unix)
+      - name: Create Unix archive
+        if: matrix.os != 'windows-latest'
+        shell: bash
+      # Создание архива (Unix)
+      - name: Create Unix archive
+        if: matrix.os != 'windows-latest'
         shell: bash
         run: |
-          # Определяем имя бинарника
-          if [[ "${{ matrix.target }}" == *"windows"* ]]; then
-            BINARY_NAME="shorts-cutter.exe"
-          else
-            BINARY_NAME="shorts-cutter"
-          fi
+          BINARY_NAME="shorts-cutter"
+          ARCHIVE_NAME="shorts-cutter-${{ matrix.suffix }}"
           
-          # Копируем файлы для архива
+          # Создаем папку для файлов
           mkdir -p release_files
+          
+          # Копируем файлы
           cp target/${{ matrix.target }}/release/$BINARY_NAME release_files/
           cp README.md README_RU.md release_files/ 2>/dev/null || true
           cp LICENSE release_files/ 2>/dev/null || true
           
           # Создаем архив
-          ARCHIVE_NAME="shorts-cutter-${{ matrix.suffix }}"
-          
           if [[ "${{ matrix.archive }}" == "zip" ]]; then
             cd release_files && zip -r "../${ARCHIVE_NAME}.zip" . && cd ..
             echo "archive_file=${ARCHIVE_NAME}.zip" >> $GITHUB_OUTPUT
@@ -97,12 +111,12 @@ jobs:
             echo "archive_file=${ARCHIVE_NAME}.tar.gz" >> $GITHUB_OUTPUT
           fi
 
-      # Загрузим артефакт
+      # Загрузка артефакта
       - name: Upload release artifact
         uses: actions/upload-artifact@v4
         with:
           name: shorts-cutter-${{ matrix.suffix }}
-          path: ${{ steps.archive.outputs.archive_file }}
+          path: ${{ steps.archive.outputs.archive_file || steps.create-windows-archive.outputs.archive_file }}
 
   # Создаем релиз с артефактами
   create-release:
@@ -133,32 +147,42 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          RUSTTARGET: ${{ matrix.target }}
-          ARCHIVE_TYPES: ${{ matrix.archive }}
-          EXTRA_FILES: "README.md LICENSE"
           tag_name: ${{ env.TAG_NAME }}
           name: Shorts Cutter ${{ env.TAG_NAME }}
           body: |
             ## Shorts Cutter ${{ env.TAG_NAME }}
             
-            High-performance Rust CLI tool for batch converting horizontal MP4 videos into vertical shorts.
+            High-performance Rust CLI tool for batch converting horizontal MP4 videos into vertical shorts with blurred backgrounds.
             
-            ### Installation
-            1. Download the appropriate archive for your platform
-            2. Extract the executable
-            3. Ensure FFmpeg is installed on your system
-            4. Run: `./shorts-cutter --help`
+            ### 🎯 Features
+            - Batch processing of MP4 files  
+            - Parallel execution with configurable threads
+            - Creates vertical shorts (720x1280) with blurred backgrounds
+            - Comprehensive logging and error handling
             
-            ### Platform Downloads
-            - **Linux x64**: `shorts-cutter-linux-x64.zip`
+            ### 📦 Installation
+            1. Download the appropriate archive for your platform below
+            2. Extract the executable to your desired location
+            3. Ensure **FFmpeg** is installed and available in PATH
+            4. Run: `./shorts-cutter --help` (or `shorts-cutter.exe --help` on Windows)
+            
+            ### 🖥️ Platform Downloads
+            - **Linux x64**: `shorts-cutter-linux-x64.tar.gz`
             - **Windows x64**: `shorts-cutter-windows-x64.zip`  
             - **macOS x64**: `shorts-cutter-macos-x64.zip`
             
-            ### Usage
+            ### 🚀 Usage
             ```bash
+            # Basic usage
+            shorts-cutter --input ./videos --output ./shorts
+            
+            # With custom thread count
             shorts-cutter --input ./videos --output ./shorts --threads 4
             ```
             
-            For detailed usage instructions, see the [README](https://github.com/${{ github.repository }}/blob/master/README.md).
+            ### 📚 Documentation
+            - [English README](https://github.com/${{ github.repository }}/blob/master/README.md)
+            - [Russian README](https://github.com/${{ github.repository }}/blob/master/README_RU.md)
+          files: artifacts/**/*
           draft: false
           prerelease: false
