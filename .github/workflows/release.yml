@@ -6,29 +6,130 @@ on:
       - 'v*'  # Триггерится на теги вида v1.0.0, v1.2.3, etc.
   release:
     types: [created]
+  workflow_dispatch:  # Для ручного тестирования
+    inputs:
+      tag_name:
+        description: 'Tag name for release (e.g., v1.0.0)'
+        required: true
+        default: 'v0.1.0-test'
+        type: string
+
+env:
+  CARGO_TERM_COLOR: always
 
 jobs:
   release:
-    name: release ${{ matrix.target }}
-    runs-on: ubuntu-latest
+    name: Release ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            archive: tar.gz
+            suffix: linux-x64
           - target: x86_64-pc-windows-gnu
+            os: ubuntu-latest  
             archive: zip
-          - target: x86_64-unknown-linux-musl
-            archive: tar.gz tar.xz tar.zst
+            suffix: windows-x64
           - target: x86_64-apple-darwin
+            os: macos-latest
             archive: zip
+            suffix: macos-x64
+
     steps:
-      - uses: actions/checkout@master
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Установим современную версию Rust
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
-      - name: Compile and release
-        uses: rust-build/rust-build.action@v1.4.5
+
+      # Установим FFmpeg для тестирования (опционально)
+      - name: Install FFmpeg (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Install FFmpeg (macOS)
+        if: matrix.os == 'macos-latest'
+        run: brew install ffmpeg
+
+      # Обновим Cargo.lock до совместимой версии
+      - name: Update Cargo.lock
+        run: cargo update
+
+      # Соберем бинарник
+      - name: Build release binary
+        run: |
+          cargo build --release --target ${{ matrix.target }} --verbose
+
+      # Создадим архив
+      - name: Create archive
+        id: archive
+        shell: bash
+        run: |
+          # Определяем имя бинарника
+          if [[ "${{ matrix.target }}" == *"windows"* ]]; then
+            BINARY_NAME="shorts-cutter.exe"
+          else
+            BINARY_NAME="shorts-cutter"
+          fi
+          
+          # Копируем файлы для архива
+          mkdir -p release_files
+          cp target/${{ matrix.target }}/release/$BINARY_NAME release_files/
+          cp README.md README_RU.md release_files/ 2>/dev/null || true
+          cp LICENSE release_files/ 2>/dev/null || true
+          
+          # Создаем архив
+          ARCHIVE_NAME="shorts-cutter-${{ matrix.suffix }}"
+          
+          if [[ "${{ matrix.archive }}" == "zip" ]]; then
+            cd release_files && zip -r "../${ARCHIVE_NAME}.zip" . && cd ..
+            echo "archive_file=${ARCHIVE_NAME}.zip" >> $GITHUB_OUTPUT
+          else
+            tar -czf "${ARCHIVE_NAME}.tar.gz" -C release_files .
+            echo "archive_file=${ARCHIVE_NAME}.tar.gz" >> $GITHUB_OUTPUT
+          fi
+
+      # Загрузим артефакт
+      - name: Upload release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: shorts-cutter-${{ matrix.suffix }}
+          path: ${{ steps.archive.outputs.archive_file }}
+
+  # Создаем релиз с артефактами
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: release
+    if: github.event_name != 'workflow_dispatch'
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          
+      - name: Extract tag name
+        run: |
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+          elif [[ "${{ github.event_name }}" == "release" ]]; then
+            echo "TAG_NAME=${{ github.event.release.tag_name }}" >> $GITHUB_ENV
+          fi
+        
+      - name: Create or update release
+        uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
