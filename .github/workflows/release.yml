@@ -86,10 +86,6 @@ jobs:
       - name: Create Unix archive
         if: matrix.os != 'windows-latest'
         shell: bash
-      # Создание архива (Unix)
-      - name: Create Unix archive
-        if: matrix.os != 'windows-latest'
-        shell: bash
         run: |
           BINARY_NAME="shorts-cutter"
           ARCHIVE_NAME="shorts-cutter-${{ matrix.suffix }}"
